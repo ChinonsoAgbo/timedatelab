@@ -6,47 +6,52 @@ package com.example.timedate_labaufgabe
  * This class manages the UI and functionality for configuring and displaying time and date differences
  * between Canada (Eastern Time) and Germany (Berlin Time).
  *
+ * For the calculation of ( time seconds )minimum
+ *          * minSdk = 31
+ *          *      is required
  * @constructor Creates a new instance of the MainActivity class.
  * @version 1.0
  * @since 26.11.2023
  * @author Chinonso
  */
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,18 +62,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.timedate_labaufgabe.ui.theme.TimeDate_LabAufgabeTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -77,6 +82,36 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MainActivity : ComponentActivity() {
+
+    private val europeBerlinZoneId = "Europe/Berlin"
+    private val canadaZoneID = "America/Toronto"
+    // Initialize mutable states for selected dates and times in Canada and Germany
+
+    private var selectedCanadaDate by
+    mutableLongStateOf(
+        LocalDateTime.now(ZoneId.of(canadaZoneID))
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    )
+
+
+    private var selectedGermanDate by
+    mutableLongStateOf(
+        LocalDateTime.now(ZoneId.of(europeBerlinZoneId))
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    )
+
+    private var selectedCanadaTime by
+    mutableLongStateOf(
+        LocalDateTime.now(ZoneId.of(canadaZoneID))
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    )
+
+
+    private var selectedGermanTime by
+    mutableLongStateOf(
+        LocalDateTime.now(ZoneId.of(europeBerlinZoneId))
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    )
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,35 +150,6 @@ class MainActivity : ComponentActivity() {
                     val germanTimeFormatter =
                         remember { SimpleDateFormat("HH:mm:ss", Locale.GERMANY) }
 
-                    // Initialize mutable states for selected dates and times in Canada and Germany
-
-                    var selectedCanadaDate by remember {
-                        mutableLongStateOf(
-                            LocalDateTime.now(ZoneId.of("America/Toronto"))
-                                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        )
-
-                    }
-                    var selectedGermanDate by remember {
-                        mutableLongStateOf(
-                            LocalDateTime.now(ZoneId.of("Europe/Berlin"))
-                                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        )
-                    }
-                    var selectedCanadaTime by remember {
-                        mutableLongStateOf(
-                            LocalDateTime.now(ZoneId.of("America/Toronto"))
-                                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        )
-
-                    }
-
-                    var selectedGermanTime by remember {
-                        mutableLongStateOf(
-                            LocalDateTime.now(ZoneId.of("Europe/Berlin"))
-                                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        )
-                    }
 
                     // Initialize mutable states for controlling visibility of date and time pickers
                     var showCanadaDatePicker by remember {
@@ -162,33 +168,30 @@ class MainActivity : ComponentActivity() {
                     )
                     val stateGermanTime = rememberTimePickerState(is24Hour = true)
 
-                    // Initialize snack bar for displaying messages
-                    val snackState = remember { SnackbarHostState() }
-                    val snackScope = rememberCoroutineScope()
-
-                    SnackbarHost(hostState = snackState)
-
                     /**
                      * This section of code defines the user interface for configuring and displaying time and date differences
                      * between Canada (Eastern Time) and Germany (Berlin Time).
                      */
+                    Text(
+                        text = "Configure time and date",
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center
+                    )
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(10.dp), // Add padding or adjust as needed
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                            .padding(10.dp) // Add padding or adjust as needed
+                            .offset(y = 40.dp), // Adjust the y value as needed to shift it downwards
+
+                        verticalArrangement = Arrangement.spacedBy(7.dp),
 
                         ) {
-                        // Title text for the configuration section
 
-                        Text(
-                            text = "Configure time and date",
-                            fontFamily = FontFamily.Monospace,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontSize = 20.sp,
-                            textAlign = TextAlign.Center
-                        )
+                        MyDropdown() // drop down box
+
 
                         // Canada Flag image
                         Row(
@@ -200,7 +203,7 @@ class MainActivity : ComponentActivity() {
                             Image(
                                 painter = painterResource(id = R.drawable.flag1),
                                 contentDescription = "Flag 1",
-                                modifier = Modifier.size(70.dp) // Adjust the size as needed
+                                modifier = Modifier.size(30.dp) // Adjust the size as needed
 
                             )
                         }
@@ -215,7 +218,6 @@ class MainActivity : ComponentActivity() {
                             Button(
                                 onClick = { showCanadaDatePicker = true },
                                 modifier = Modifier
-                                    .size(100.dp)
                                     .background(Color.Transparent),
                                 shape = CircleShape, // Make it circular
                                 colors = ButtonDefaults.textButtonColors(
@@ -224,7 +226,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 // calender button
                                 Text(
-                                    fontSize = 25.sp, text = "\uD83D\uDCC5"
+                                    fontSize = 35.sp, text = "\uD83D\uDCC5"
                                 )
                             }
                             // Display selected Canada date
@@ -249,7 +251,6 @@ class MainActivity : ComponentActivity() {
                                     showCanadaTimepicker = true
                                 },
                                 modifier = Modifier
-                                    .size(100.dp)
                                     .background(Color.Transparent),
                                 shape = CircleShape, // Make it circular
                                 colors = ButtonDefaults.textButtonColors(
@@ -257,7 +258,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             ) {
                                 Text(
-                                    fontSize = 25.sp, text = "\uD83D\uDD50"
+                                    fontSize = 35.sp, text = "\uD83D\uDD50"
                                 ) // calender button
                             }
                             // Display selected Canada time
@@ -280,7 +281,7 @@ class MainActivity : ComponentActivity() {
                             Image(
                                 painter = painterResource(id = R.drawable.flag2),
                                 contentDescription = "Flag 2",
-                                modifier = Modifier.size(70.dp) // Adjust the size as needed
+                                modifier = Modifier.size(35.dp) // Adjust the size as needed
 
                             )
                         }
@@ -294,7 +295,6 @@ class MainActivity : ComponentActivity() {
                             Button(
                                 onClick = { showGermanDatePicker = true },
                                 modifier = Modifier
-                                    .size(100.dp)
                                     .background(Color.Transparent),
                                 shape = CircleShape, // Make it circular
                                 colors = ButtonDefaults.textButtonColors(
@@ -302,7 +302,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             ) {
                                 Text(
-                                    fontSize = 25.sp, text = "\uD83D\uDCC5"
+                                    fontSize = 35.sp, text = "\uD83D\uDCC5"
                                 ) // calender button
                             }
 
@@ -326,7 +326,6 @@ class MainActivity : ComponentActivity() {
                                     showGermanTimepicker = true/* Austarailien Calendar action */
                                 },
                                 modifier = Modifier
-                                    .size(100.dp)
                                     .background(Color.Transparent),
                                 shape = CircleShape, // Make it circular
                                 colors = ButtonDefaults.textButtonColors(
@@ -334,7 +333,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             ) {
                                 Text(
-                                    fontSize = 25.sp,
+                                    fontSize = 35.sp,
                                     text = "\uD83D\uDD50",
                                 ) // calender button
                             }
@@ -371,6 +370,12 @@ class MainActivity : ComponentActivity() {
                             minutes = calculateTimeDifference(
                                 selectedGermanTime, selectedCanadaTime
                             ).toMinutes() % 60
+
+                            /**
+                             * For the calculation of seconds minimum
+                             * minSdk = 31
+                             *      is required
+                             */
                             seconds = calculateTimeDifference(
                                 selectedGermanTime,
                                 selectedCanadaTime
@@ -461,17 +466,7 @@ class MainActivity : ComponentActivity() {
                                             Calendar.HOUR_OF_DAY, stateCanadaTime.hour
                                         )
                                         canadaCalender.set(Calendar.MINUTE, stateCanadaTime.minute)
-                                        // cal.set(Calendar.SECOND, stateCanadaTime.minute)// try to set yor seconds here )
-                                        canadaCalender.isLenient = false
-                                        snackScope.launch {
-                                            snackState.showSnackbar(
-                                                "Entered time: ${
-                                                    canadaTimeFormatter.format(
-                                                        canadaCalender.time
-                                                    )
-                                                }"
-                                            )
-                                        }/* pass the selected time to the variable to store the new state of the time */
+                                        /* pass the selected time to the variable to store the new state of the time */
                                         selectedCanadaTime =
                                             (canadaCalender.timeInMillis)/* Save the new change */
 
@@ -507,22 +502,14 @@ class MainActivity : ComponentActivity() {
 
                                 Button(
                                     onClick = {
-                                        germanCalender = Calendar.getInstance() // new Calender instance
+                                        germanCalender =
+                                            Calendar.getInstance() // new Calender instance
                                         germanCalender.set(
                                             Calendar.HOUR_OF_DAY, stateGermanTime.hour
                                         )
                                         germanCalender.set(Calendar.MINUTE, stateGermanTime.minute)
                                         germanCalender.isLenient = false
-                                        // Head snack to display info
-                                        snackScope.launch {
-                                            snackState.showSnackbar(
-                                                "Entered time: ${
-                                                    germanTimeFormatter.format(
-                                                        germanCalender.time
-                                                    )
-                                                }"
-                                            )
-                                        }/* pass the selected time to the variable to store the new state of the time */
+                                        /* pass the selected time to the variable to store the new state of the time */
                                         selectedGermanTime = (germanCalender.timeInMillis)
                                         showGermanTimepicker = false
                                     }, modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -534,7 +521,7 @@ class MainActivity : ComponentActivity() {
                     }
 
 
-                 // Date picker for canada
+                    // Date picker for canada
                     if (showCanadaDatePicker) {
                         DatePickerDialog(
                             onDismissRequest = { showCanadaDatePicker = false },
@@ -542,16 +529,7 @@ class MainActivity : ComponentActivity() {
                                 TextButton(onClick = {
                                     showCanadaDatePicker = false
                                     selectedCanadaDate = stateCanadaDate.selectedDateMillis!!
-                                    // Launch snack to show user their input
-                                    snackScope.launch {
-                                        snackState.showSnackbar(
-                                            "Entered date: ${
-                                                canadaDateFormatter.format(
-                                                    selectedCanadaDate
-                                                )
-                                            }"
-                                        )
-                                    }
+
                                 }) {
                                     Text(text = "confirm")
                                 }
@@ -581,16 +559,7 @@ class MainActivity : ComponentActivity() {
                                 TextButton(onClick = {
                                     showGermanDatePicker = false
                                     selectedGermanDate = stateGermanDate.selectedDateMillis!!
-                                    // Launch snack to show user their input
-                                    snackScope.launch {
-                                        snackState.showSnackbar(
-                                            "Entered date: ${
-                                                germanDateFormatter.format(
-                                                    selectedGermanDate
-                                                )
-                                            }"
-                                        )
-                                    }
+
                                 }) {
                                     Text(text = "confirm")
                                 }
@@ -615,7 +584,106 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * A composable function that displays a dropdown menu allowing the user to select a time zone.
+     *
+     * @param isExpanded Whether the dropdown menu is expanded.
+     * @param gender The selected time zone.
+     * @param onExpandedChange Callback invoked when the dropdown menu's expansion state changes.
+     */
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun MyDropdown() {
+        val europeBerlinZoneId = "Europe/Berlin"
+
+        var isExpanded by remember { mutableStateOf(false) }
+        var canadaStateID by remember { mutableStateOf("America/Toronto") }
+        ExposedDropdownMenuBox(
+            expanded = isExpanded,
+            onExpandedChange = { isExpanded = it }
+        ) {
+
+            TextField(
+                value = canadaStateID,
+
+                        onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded)
+                },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                modifier = Modifier.menuAnchor(),
+                        textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+            )
+
+
+            )
+            // Use Modifier.background to anchor the dropdown to the background
+            ExposedDropdownMenu(
+                expanded = isExpanded,
+                onDismissRequest = {
+                    isExpanded = false
+                },
+                modifier = Modifier.background(MaterialTheme.colorScheme.background)
+            ) {
+
+                DropdownMenuItem(
+                    text = {
+                        Text(text = "America/Toronto",
+                            fontFamily = FontFamily.Monospace
+                        )
+                    },
+                    onClick = {
+                        canadaStateID = "America/Toronto"
+                        selectedCanadaTime =
+                            LocalDateTime.now(ZoneId.of(canadaStateID)) // change the current zone id
+                                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        selectedCanadaDate = LocalDateTime.now(ZoneId.of(canadaStateID))
+                            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                        updateEuropeanZoneID()
+
+                        isExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(text = "America/Vancouver",
+                            fontFamily = FontFamily.Monospace
+                        )
+                    },
+                    onClick = {
+                        canadaStateID = "America/Vancouver"
+                        selectedCanadaTime = LocalDateTime.now(ZoneId.of(canadaStateID))
+                            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        selectedCanadaDate = LocalDateTime.now(ZoneId.of(canadaStateID))
+                            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                        updateEuropeanZoneID()
+
+                        isExpanded = false
+                    }
+                )
+
+            }
+        }
+    }
+
+    /**
+     * updateEuropeanZoneID updates the european time
+     */
+    private fun updateEuropeanZoneID() {
+        val europeBerlinZoneId = "Europe/Berlin"
+        selectedGermanDate = LocalDateTime.now(ZoneId.of(europeBerlinZoneId))
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        selectedGermanTime = LocalDateTime.now(ZoneId.of(europeBerlinZoneId))
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
 }
+
 
 /**
  * Calculates the day difference between two given dates.

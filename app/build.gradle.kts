@@ -9,6 +9,11 @@ android {
 
     defaultConfig {
         applicationId = "com.example.timedate_labaufgabe"
+        /**
+         * For the calculation of ( time seconds )minimum
+         * minSdk = 31
+         *      is required
+         */
         minSdk = 31
         targetSdk = 34
         versionCode = 1
